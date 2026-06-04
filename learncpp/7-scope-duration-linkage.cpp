@@ -56,7 +56,44 @@ int main(){
     constexpr int g_z{ 2 }; // constexpr globals have internal linkage by default
     [[maybe_unused]] constexpr int g_x { 2 }; // this internal g_x is only accessible within a.cpp
     static int foo() {};     // defines internal function
+}
+{   // <----------- 7.7 ------------>
+    void sayHi(){ // this function has external linkage, and can be seen by other files
+        std::cout << "Hi!\n";
+    }
+    void sayHi(); // forward declaration for function sayHi, makes sayHi accessible in this file
+    
+    // Global variable forward declarations (extern w/ no initializer):
+    extern int g_y;                 // forward declaration for non-constant global variable
+    extern const int g_y;           // forward declaration for const global variable
+    extern constexpr int g_y;       // not allowed: constexpr variables can't be forward declared
 
+    // External global variable definitions (no extern)
+    int g_x;                        // defines non-initialized external global variable (zero initialized by default)
+    int g_x { 1 };                  // defines initialized external global variable
+
+    // External const global variable definitions (extern w/ initializer)
+    extern const int g_x { 2 };     // defines initialized const external global variable
+    extern constexpr int g_x { 3 }; // defines initialized constexpr external global variable
+}
+
+{   // <----------- 7.9 ------------>
+    inline int min(int x, int y){ // inline keyword means this function is an inline function
+        return (x < y) ? x : y;
+    }
+}
+{   // <----------- 7.11 ------------>
+    void incrementAndPrint(){
+        static int s_value{ 1 }; // static duration via static keyword.  This initializer is only executed once.
+        ++s_value;
+        std::cout << s_value << '\n';
+    } // s_value is not destroyed here, but becomes inaccessible because it goes out of scope
+    incrementAndPrint(); incrementAndPrint(); incrementAndPrint();
+    // prints 2 3 4
+    int generateID(){
+        static int s_itemID{ 0 };
+        return s_itemID++; // makes copy of s_itemID, increments the real s_itemID, then returns the value in the copy
+    }
 }
     return 0;
 }
