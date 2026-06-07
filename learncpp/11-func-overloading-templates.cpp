@@ -257,8 +257,6 @@ int main(){
 
     template <typename T> // in add.cpp, instead add ts in add.h
     T addOne(T x) {/*code */} // function template definition
-
-
 }
     return 0;
 }
