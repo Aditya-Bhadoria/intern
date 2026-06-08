@@ -159,10 +159,22 @@ int main(){
     std::cout << *ptr << '\n'; // undefined behavior from dereferencing a dangling pointer
 }
 {   // <----------- 12.8 ------------>
+    int* ptr {}; // ptr is now a null pointer, and is not holding an address
+    int* ptr { nullptr }; // can use nullptr to initialize a pointer to be a null pointer
+    int x { 5 };
+    ptr = &x; // ptr now pointing at object x (no longer a null pointer)
+    ptr = nullptr; // Can assign nullptr to make the pointer a null pointer
+    someFunction(nullptr); // we can also pass nullptr to a function that has a pointer parameter
+    int* nullPtr {};
+    std::cout << "nullPtr is " << (nullPtr==nullptr ? "null\n" : "non-null\n"); // explicit test for equivalence
+    std::cout << "nullPtr is " << (nullPtr ? "non-null\n" : "null\n"); // implicit conversion to Boolean
+    float* ptr { 0 };  // ptr is now a null pointer (for example only, don't do this)
     
+    #include <cstddef> // for NULL
+    double* ptr { NULL }; // ptr is a null pointer
 }
 {   // <----------- 12.9 ------------>
-
+    
 }
 {   // <----------- 12.10 ------------>
 
