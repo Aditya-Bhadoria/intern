@@ -174,25 +174,236 @@ int main(){
     double* ptr { NULL }; // ptr is a null pointer
 }
 {   // <----------- 12.9 ------------>
+    const int x { 5 }; // x is now const
+    int* ptr { &x };   // compile error: cannot convert from const int* to int*
+    const int* ptr { &x }; // okay: ptr is pointing to a "const int"
+    *ptr = 6; // not allowed: we can't change a const value
+    const int y{ 6 };
+    ptr = &y; // okay: ptr now points at const int y
+    int x{ 5 }; // non-const
+    const int* ptr { &x }; // ptr points to a "const int"
+    *ptr = 6;  // not allowed: ptr points to a "const int" so we can't change the value through ptr
+    x = 6; // allowed: the value is still non-const when accessed through non-const identifier x
     
+    int* const ptr { &x }; // const after the asterisk means this is a const pointer
+    ptr = &y; // error: once initialized, a const pointer can not be changed.
+    *ptr = 6; // okay: the value being pointed to is non-const
+    const int* const ptr { &value }; // a const pointer to a const value
+
+    int v{ 5 };
+    int* ptr0 { &v };             // points to an "int" but is not const itself.  We can modify the value or the address.
+    const int* ptr1 { &v };       // points to a "const int" but is not const itself.  We can only modify the address.
+    int* const ptr2 { &v };       // points to an "int" and is const itself.   We can only modify the value.
+    const int* const ptr3 { &v }; // points to a "const int" and is const itself.  We can't modify the value nor the address.
+    // if the const is on the left side of the *, the const belongs to the value
+    // if the const is on the right side of the *, the const belongs to the pointer
 }
 {   // <----------- 12.10 ------------>
+    void printByAddress(const std::string* ptr){ // The function parameter is a pointer that holds the address of str
+        std::cout << *ptr << '\n'; // print the value via the dereferenced pointer
+    }
+    std::string str{ "Hello, world!" };
+    printByAddress(&str); // pass str by address, does not make a copy of str
 
+    void changeValue(int* ptr){ // note: ptr is a pointer to non-const in this example
+        *ptr = 6; // change the value to 6
+    }
+    int x{ 5 };
+    changeValue(&x); // we're passing the address of x to the function
+    void changeValue(const int* ptr){ // note: ptr is now a pointer to a const
+        *ptr = 6; // error: can not change const value
+    }
+    void print(const int* ptr){ // now a pointer to a const int
+        assert(ptr); // fail the program in debug mode if a null pointer is passed (since this should never happen)
+        // (optionally) handle this as an error case in production mode so we don't crash if it does happen
+        if (!ptr) return;
+    }
+    printByAddress(&5);  // error: can't take address of r-value
 }
 {   // <----------- 12.11 ------------>
+    void nullify([[maybe_unused]] int* ptr2){
+        ptr2 = nullptr; // Make the function parameter a null pointer
+    }
+    int x{ 5 };
+    int* ptr{ &x }; // ptr points to x
+    nullify(ptr);
+    std::cout << "ptr is " << (ptr ? "non-null\n" : "null\n"); // ptr is non-null
 
+    void nullify(int*& refptr){ // refptr is now a reference to a pointer
+        refptr = nullptr; // Make the function parameter a null pointer
+    }
+    nullify(ptr);
+    std::cout << "ptr is " << (ptr ? "non-null\n" : "null\n"); // ptr is null
+
+    void print(int x) {} // this function accepts an integer
+    void print(int* ptr) {} // this function accepts an integer pointer
+	print(ptr);  // always calls print(int*) because ptr has type int* (good)
+	print(0);    // always calls print(int) because 0 is an integer literal (hopefully this is what we expected)
+	print(NULL); // this statement could do any of the following:
+	// call print(int) (Visual Studio does this)
+	// call print(int*)
+	// result in an ambiguous function call compilation error (gcc and Clang do this)
+	print(nullptr); // always calls print(int*)
+
+    void print(std::nullptr_t) {}
+    void print(int*) {}
+    print(nullptr); // calls print(std::nullptr_t)
+    print(ptr); // calls print(int*)
+    ptr = nullptr;
+    print(ptr); // calls print(int*) (since ptr has type int*)
 }
 {   // <----------- 12.12 ------------>
+    std::string&       returnByReference(); // returns a reference to an existing std::string (cheap)
+    const std::string& returnByReferenceToConst(); // returns a const reference to an existing std::string (cheap)
+    const std::string& getProgramName(){ // returns a const reference
+        static const std::string s_programName { "Calculator" }; // has static duration, destroyed at end of program
+        return s_programName;
+    }
 
+    const std::string& getProgramName(){
+        const std::string programName { "Calculator" }; // now a non-static local variable, destroyed when function ends
+        return programName;
+    }
+    std::cout << getProgramName(); // undefined behavior - dangling reference
+    
+    // returns const reference to temporary object
+    const int& returnByConstReference(){ return 5; }
+    const int& ref { returnByConstReference() };
+    std::cout << ref; // undefined behavior
+
+    const int& getNextId(){
+        static int s_x{ 0 }; // note: variable is non-const
+        ++s_x; // generate the next id
+        return s_x; // and return a reference to it
+    }
+    const int& id1 { getNextId() }; // id1 is a reference
+    const int& id2 { getNextId() }; // id2 is a reference
+    std::cout << id1 << id2 << '\n'; // prints - 22
+    // IF :-
+    const int id1 { getNextId() }; // id1 is a normal variable now and receives a copy of the value returned by reference from getNextId()
+    const int id2 { getNextId() }; // id2 is a normal variable now and receives a copy of the value returned by reference from getNextId()
+    std::cout << id1 << id2 << '\n'; // prints - 12
+
+    // Takes two std::string objects, returns the one that comes first alphabetically
+    const std::string& firstAlphabetical(const std::string& a, const std::string& b){
+        return (a < b) ? a : b; // We can use operator< on std::string to determine which comes first alphabetically
+    }
+
+    const std::string& foo(const std::string& s) { return s; }
+    std::string getHello() { return "Hello"; }
+    // implicit conversion to std::string
+    const std::string s{ foo(getHello()) };
+    // okay for an rvalue passed by const reference to be returned by const reference
+
+    // takes two integers by non-const reference, and returns the greater by reference
+    int& max(int& x, int& y) { return (x > y) ? x : y; }
+    int a{ 5 };
+    int b{ 6 };
+    max(a, b) = 7; // sets the greater of a or b to 7
 }
 {   // <----------- 12.13 ------------>
-
+    // return by value
+    [[maybe_unused]] int x{ getByValue() }; // can use to initialize object
+    std::cout << getByValue() << '\n';      // can use temporary return value in expression
+    // return by out parameter
+    int y{};                // must first allocate an assignable object
+    getByReference(y);      // then pass to function to assign the desired value
+    std::cout << y << '\n'; // and only then can we use that value
 }
 {   // <----------- 12.14 ------------>
+    const double a { 7.8 }; // a has type const double
+    auto b { a };           // b has type double (const dropped)
+    constexpr double c { 7.8 }; // c has type const double (constexpr implicitly applies const)
+    auto d { c };               // d has type double (const dropped)
 
+    std::string& getRef(); // some function that returns a reference
+    auto ref { getRef() }; // type deduced as std::string (not std::string&)
+    auto& ref2 { getRef() }; // std::string& (reference dropped, reference reapplied)
+
+    const int x;    // this const applies to x, so it is top-level
+    int* const ptr; // this const applies to ptr, so it is top-level
+    // references don't have a top-level const syntax, as they are implicitly top-level const
+    const int& ref; // this const applies to the object being referenced, so it is low-level
+    const int* ptr; // this const applies to the object being pointed to, so it is low-level
+    const int* const ptr; // the left const is low-level, the right const is top-level
+    
+    const std::string& getConstRef(); // some function that returns a reference to const
+    auto ref1{ getConstRef() }; // std::string (reference dropped, then top-level const dropped from result)
+    auto ref1{ getConstRef() };        // std::string (reference and top-level const dropped)
+    const auto ref2{ getConstRef() };  // const std::string (reference dropped, const dropped, const reapplied)
+    auto& ref3{ getConstRef() };       // const std::string& (reference dropped and reapplied, low-level const not dropped)
+    const auto& ref4{ getConstRef() }; // const std::string& (reference dropped and reapplied, low-level const not dropped)
+
+    // Constexpr is not part of an expression’s type, so it is not deduced by auto.
+    constexpr const std::string_view& getConstRef() {} // function is constexpr, returns a const std::string_view&
+    auto ref1{ getConstRef() };                  // std::string_view (reference dropped and top-level const dropped)
+    constexpr auto ref2{ getConstRef() };        // constexpr const std::string_view (reference dropped and top-level const dropped, constexpr applied, implicitly const)
+    auto& ref3{ getConstRef() };                 // const std::string_view& (reference reapplied, low-level const not dropped)
+    constexpr const auto& ref4{ getConstRef() }; // constexpr const std::string_view& (reference reapplied, low-level const not dropped, constexpr applied)
+
+    std::string* getPtr(); // some function that returns a pointer
+    auto ptr1{ getPtr() };      // std::string*
+    auto* ptr2{ getPtr() };     // std::string*
+    auto ptr3{ *getPtr() };     // std::string (because we dereferenced getPtr())
+    auto* ptr4{ *getPtr() };    // does not compile (initializer not a pointer)
+
+    const auto ptr1{ getPtr() };  // std::string* const
+    auto const ptr2 { getPtr() }; // std::string* const
+    const auto* ptr3{ getPtr() }; // const std::string*
+    auto* const ptr4{ getPtr() }; // std::string* const
+
+    std::string s{};
+    const std::string* const ptr { &s };
+    auto ptr1{ ptr };  // const std::string*
+    auto* ptr2{ ptr }; // const std::string*
+    auto const ptr3{ ptr };  // const std::string* const
+    const auto ptr4{ ptr };  // const std::string* const
+    auto* const ptr5{ ptr }; // const std::string* const
+    const auto* ptr6{ ptr }; // const std::string*
+    const auto const ptr7{ ptr };  // error: const qualifer can not be applied twice
+    const auto* const ptr8{ ptr }; // const std::string* const
 }
 {   // <----------- 12.15 ------------>
+    // std::numeric_limits<T>::lowest() returns most -ve value for type T
+    // std::numeric_limits<T>::max() largest +ve for type T
+    // Our function now optionally returns an int value
+    std::optional<int> doIntDivision(int x, int y){
+        if (y == 0) return {}; // or return std::nullopt
+        return x / y;
+    }
+    std::optional<int> result1 { doIntDivision(20, 5) };
+    std::optional<int> result2 { doIntDivision(5, 0) };
+    if (result1) // if the function returned a value
+        std::cout << "Result 1: " << *result1 << '\n'; // get the value
+    else std::cout << "Result 1: failed\n";
+    // prints - 4, Result 2: failed
 
+    if (o1.has_value()) // call has_value() to check if o1 has a value
+    if (o2)             // use implicit conversion to bool to check if o2 has a value
+    std::cout << *o1;             // dereference to get value stored in o1 (undefined behavior if o1 does not have a value)
+    std::cout << o2.value();      // call value() to get value stored in o2 (throws std::bad_optional_access exception if o2 does not have a value)
+    std::cout << o3.value_or(42); // call value_or() to get value stored in o3 (or value `42` if o3 doesn't have a value)
+
+    void printIDNumber(std::optional<const int> id = std::nullopt){
+        if (id)
+            std::cout << "Your ID number is " << *id << ".\n";
+        else
+            std::cout << "Your ID number is not known.\n";
+    }
+    printIDNumber(); // we don't know the user's ID yet
+    int userid { 34 };
+    printIDNumber(userid); // we know the user's ID now
+    printIDNumber(62); // we can also pass an rvalue -> can't do this if parameter of type const int *
+
+    struct Employee{
+        std::string name{}; // expensive to copy
+        int id;
+    };
+    void printEmployeeID(std::optional<std::reference_wrapper<Employee>> e=std::nullopt){
+        if (e) std::cout << "Your ID number is " << e->get().id << ".\n";
+        else std::cout << "Your ID number is not known.\n";
+    }
+    // std::optional doesn’t support references directly, can use std::reference_wrapper to mimic reference
 }
     return 0;
 }
