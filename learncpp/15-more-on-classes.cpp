@@ -4,22 +4,147 @@ using ll=long long;
 
 int main(){
 {   // <----------- 15.1 ------------>
-    
+    void print() const { std::cout << m_id; }       // implicit use of this
+    void print() const { std::cout << this->m_id; } // explicit use of this
+
+    simple.setID(2); // when complied changed to -
+    Simple::setID(&simple, 2); // note that simple has been changed from an object prefix to a function argument!
+    void setID(int id) { m_id = id; }
+    static void setID(Simple* const this, int id) { this->m_id = id; }
+    Simple b{2}; // this = &b inside the Simple constructor
+    a.setID(3); // this = &a inside member function setID()
+
+    struct Something {
+        int data{}; // not using m_ prefix because this is a struct
+        void setData(int data) {
+            this->data = data; // this->data is the member, data is the local parameter
+        }
+    };
+
+    std::cout << "Hello, " << userName; // evaluates to
+    (std::cout << "Hello, ") << userName; // after printing hello, it goes
+    (std::cout) << userName; // operator<< returns the stream object that was passed in
+    public:
+        Calc& add(int value) { m_value += value; return *this; }
+        Calc& sub(int value) { m_value -= value; return *this; }
+        Calc& mult(int value) { m_value *= value; return *this; }
+        int getValue() const { return m_value; }
+        void reset() { *this = {}; } // value initialize a new object and overwrite the implicit object
+    Calc calc{};
+    calc.add(5).sub(3).mult(4); // method chaining
+    std::cout << calc.getValue() << '\n'; // (((0 + 5) - 3) * 4)
+    calc.reset();
+    std::cout << calc.getValue() << '\n'; // prints 0
+    // With const member functions, this is a const pointer to a const value
+    // Attempting to call a non-const member function on a const object generate error :-
+    // 'int Something::getValue(void)': cannot convert 'this' pointer from 'const Something' to 'Something &'
 }
 {   // <----------- 15.2 ------------>
-
+    class Date {
+    public:
+        Date(int year, int month, int day); // constructor declaration
+        void print() const; // print function declaration
+    };
+    Date::Date(int year, int month, int day) // constructor definition
+        : m_year{ year }, m_month{ month }, m_day{ day }
+    {}
+    void Date::print() const { // print function definition
+        std::cout << "Date(" << m_year << ", " << m_month << ", " << m_day << ")\n";
+    };
+    // Member functions defined inside the class definition are implicitly inline, thus exempt from (ODR) one-definition rule.
 }
 {   // <----------- 15.3 ------------>
+    class Fruit{
+    public:
+        enum Type { apple, banana, cherry };
+    private:
+        Type m_type {};
+        int m_percentageEaten { 0 };
+    public:
+        Fruit(Type type) : m_type { type } {}
+        Type getType() { return m_type;  }
+        int getPercentageEaten() { return m_percentageEaten;  }
+        bool isCherry() { return m_type == cherry; } // Inside members of Fruit, we no longer need to prefix enumerators with FruitType::
+    };
+	// Note: Outside the class, we access the enumerators via the Fruit:: prefix now
+    Fruit apple { Fruit::apple };
+    if (apple.getType() == Fruit::apple) std::cout << "I am an apple";
+    else std::cout << "I am not an apple";
 
+    class Employee{
+    public:
+        using IDType = int;
+        class Printer {
+        public:
+            void print(const Employee& e) const {
+                // Printer can't access Employee's `this` pointer
+                // so we can't print m_name and m_id directly
+                // Instead, we have to pass in an Employee object to use
+                // Because Printer is a member of Employee,
+                // we can access private members e.m_name and e.m_id directly
+                std::cout << e.m_name << " has id: " << e.m_id << '\n';
+            }
+        };
+    };
+    
+    class outer;         // okay: can forward declare non-nested type
+    class outer::inner1; // error: can't forward declare nested type prior to outer class definition
+    class outer{
+    public:
+        class inner1;   // okay: forward declaration inside the enclosing class okay
+        class inner1{}; // okay: definition of forward declared type inside the enclosing class
+        class inner2;   // okay: forward declaration inside the enclosing class okay
+    };
+    class outer::inner1; // okay (but redundant) since nested type has already been declared as part of outer class definition
 }
 {   // <----------- 15.4 ------------>
+    ~Simple() // here's our destructor
+    { std::cout << "Destructing Simple " << m_id << '\n'; }
+    int main(){
+        // Allocate a Simple
+        Simple simple1{ 1 };
+        { Simple simple2{ 2 }; } // simple2 dies here
+        return 0;
+    } // simple1 dies here
 
+	~NetworkData() { sendData(); } // make sure all data is sent before object is destroyed
 }
 {   // <----------- 15.5 ------------>
-
+    template <typename T>
+    struct Pair {
+        T first{};
+        T second{};
+    };
+    // Here's a deduction guide for our Pair (required in C++17 or older)
+    // Pair objects initialized with arguments of type T and T should deduce to Pair<T>
+    template <typename T>
+    Pair(T, T) -> Pair<T>;
+    Pair<int> p1{ 5, 6 };        // instantiates Pair<int> and creates object p1
+    Pair<double> p2{ 1.2, 3.4 }; // instantiates Pair<double> and creates object p2
+    Pair<double> p3{ 7.8, 9.0 }; // creates object p3 using prior definition for Pair<double>
+    
+    template <typename T>
+    class Pair {
+    private:
+        T m_first{};
+        T m_second{};
+    public:
+        // When we define a member function inside the class definition,
+        // the template parameter declaration belonging to the class applies
+        Pair(const T& first, const T& second) : m_first{ first } , m_second{ second } {}
+        bool isEqual(const Pair<T>& pair);
+    };
+    // When we define a member function outside the class definition,
+    // we need to resupply a template parameter declaration
+    template <typename T>
+    bool Pair<T>::isEqual(const Pair<T>& pair) // note the parameter has type Pair, not Pair<T>
+    { /*code*/ }
+    Pair p1{ 5, 6 }; // uses CTAD to infer type Pair<int>
+    std::cout << std::boolalpha << "isEqual(5, 6): " << p1.isEqual( Pair{5, 6} ) << '\n';
+    std::cout << std::boolalpha << "isEqual(5, 7): " << p1.isEqual( Pair{5, 7} ) << '\n';
 }
 {   // <----------- 15.6 ------------>
-
+    
 }
 {   // <----------- 15.7 ------------>
 
