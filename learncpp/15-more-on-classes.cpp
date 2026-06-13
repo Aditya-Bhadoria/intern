@@ -144,13 +144,53 @@ int main(){
     std::cout << std::boolalpha << "isEqual(5, 7): " << p1.isEqual( Pair{5, 7} ) << '\n';
 }
 {   // <----------- 15.6 ------------>
-    
+    struct Something {
+        static int s_value; // declare s_value as static (initializer moved below)
+    };
+    int Something::s_value{ 1 }; // define and initialize s_value to 1 (we'll discuss this section below)
+    Something first{};
+    Something second{};
+    first.s_value = 2;
+    std::cout << first.s_value << " " << second.s_value << '\n'; // prints 2 2
+    // static members are global variables that live inside the scope region of the class
+    // not subject to access controls
+    // note: we're not instantiating any objects of type Something
+    Something::s_value = 2;
+    std::cout << Something::s_value << '\n';
+
+    class Whatever{
+    public:
+        static const int s_value{ 4 }; // a static const int can be defined and initialized directly
+        static inline int s_value{ 4 }; // a static inline variable can be defined and initialized directly
+        static constexpr double s_value{ 2.2 }; // ok
+        static constexpr std::string_view s_view{ "Hello" }; // this even works for classes that support constexpr initialization
+        
+        auto m_x { 5 };           // auto not allowed for non-static members
+        std::pair m_v { 1, 2.3 }; // CTAD not allowed for non-static members
+        static inline auto s_x { 5 };           // auto allowed for static members
+        static inline std::pair s_v { 1, 2.3 }; // CTAD allowed for static members
+    };
 }
 {   // <----------- 15.7 ------------>
+    private: // now private
+        static inline int s_value { 1 };
+    std::cout << Something::s_value; // error: s_value is private and can't be accessed directly outside the class
+    public:
+        static int getValue() { return s_value; } // static member function
+    std::cout << Something::getValue() << '\n';
+    // pure static classes - (also called “monostates) - all static members
+    // static class is preferable if static data members and/or need access controls. Otherwise, prefer a namespace.
 
+    struct Chars {
+        char first{}; char second{}; char third{}; char fourth{}; char fifth{};
+    };
+    struct MyClass {
+        static inline Chars s_mychars { 'a', 'e', 'i', 'o', 'u' }; // initialize static variable at point of definition
+    };
+    std::cout << MyClass::s_mychars.third; // print i
 }
 {   // <----------- 15.8 ------------>
-
+    
 }
 {   // <----------- 15.9 ------------>
 
