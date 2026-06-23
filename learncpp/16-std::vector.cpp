@@ -102,22 +102,118 @@ int main(){
        std::cout << num << ' ';
     for (const auto& word : words) // word is now a const reference
         std::cout << word << ' ';
-    
+    for (const auto& word : std::views::reverse(words)) // create a reverse view
+        std::cout << word << ' ';
 }
 {   // <----------- 16.9 ------------>
+    namespace Students{
+        enum Names{
+            kenny, // 0
+            kyle, // 1
+            stan, // 2
+            butters, // 3
+            cartman, // 4
+            max_students // 5
+        };
+    }
+    std::vector testScores { 78, 94, 66, 77, 14 };
+    testScores[Students::stan] = 76; // we are now updating the test score belonging to stan
+    Students::Names name { Students::stan }; // non-constexpr
+    testScores[name] = 76; // may trigger a sign conversion warning if Student::Names defaults to a signed underlying type
 
+    enum Names : unsigned int // explicitly specifies the underlying type is unsigned int
+    { /*code*/ };
+    Students::Names name { Students::stan }; // non-constexpr
+    testScores[name] = 76; // not a sign conversion since name is unsigned
+
+    namespace Students{
+        enum Names{
+            kenny, // 0
+            kyle, // 1
+            stan, // 2
+            butters, // 3
+            cartman, // 4
+            // add future enumerators here
+            max_students // 5
+        };
+    }
+    std::cout << "The class has " << Students::max_students << " students\n";
+    // Ensure the number of test scores is the same as the number of students
+    assert(std::size(testScores) == Students::max_students);
+    // If your array is constexpr, then you should static_assert instead. std::vector doesn’t support constexpr, but std::array (and C-style arrays) do.
+
+    enum class StudentNames { // now an enum class{
+        kenny, // 0
+        kyle, // 1
+        stan, // 2
+        butters, // 3
+        cartman, // 4
+        max_students // 5
+    };
+    // compile error: no conversion from StudentNames to std::size_t
+    std::vector<int> testScores(StudentNames::max_students);
+    // compile error: no conversion from StudentNames to std::size_t
+    testScores[StudentNames::stan] = 76;
+    // compile error: no conversion from StudentNames to any type that operator<< can output
+    std::cout << "The class has " << StudentNames::max_students << " students\n";
+    // Fix -> we can static_cast the enumerator to an integer
+    // OR
+    // Overload the unary + operator to convert StudentNames to the underlying type
+    constexpr auto operator+(StudentNames a) noexcept {
+        return static_cast<std::underlying_type_t<StudentNames>>(a);
+    }
+    std::vector<int> testScores(+StudentNames::max_students);
+    testScores[+StudentNames::stan] = 76;
+    std::cout << "The class has " << +StudentNames::max_students << " students\n";
 }
 {   // <----------- 16.10 ------------>
+    // Both std::array and C-style arrays are fixed-size array types
+    v.resize(5);              // resize to 5 elements
+    // Vector indexing is based on length, not capacity
+    void printCapLen(const std::vector<int>& v){
+        std::cout << "Capacity: " << v.capacity() << " Length:"	<< v.size() << '\n';
+    }
+	std::vector<int> v(1000); // allocate room for 1000 elements
+	printCapLen(v); // 1000, 1000
+	v.resize(0); // resize to 0 elements
+	printCapLen(v); // 1000, 0
+	v.shrink_to_fit(); // tries to reduce capacity to len, may ignore it or partially reduce capacity
+	printCapLen(v); // 0, 0
+    // GCC and Clang doubles the current capacity, when pushing triggers reallocation
+    // Visual Studio 2022 multiplies the current capacity by 1.5
+	stack.reserve(6); // reserve space for 6 elements (but do not change length)
+	stack.push_back(1); // {1}       len = 1, cap = 6
+	stack.push_back(2); // {1, 2}    len = 2, cap = 6
+	stack.push_back(3); // {1, 2, 3} len = 3, cap = 6
+    // resize() member function changes the length of the vector, and the capacity (if necessary).
 
+    class Foo{
+    private:
+        std::string m_a{};
+        int m_b{};
+    public:
+        Foo(std::string_view a, int b) : m_a { a }, m_b { b } {}
+        explicit Foo(int b) : m_a {}, m_b { b } {};
+    };
+	std::vector<Foo> stack{};
+	// When we already have an object, push_back and emplace_back are similar in efficiency
+	Foo f{ "a", 2 };
+	stack.push_back(f);    // prefer this one
+	stack.emplace_back(f);
+	// When we need to create a temporary object to push, emplace_back is more efficient
+	stack.push_back({ "a", 2 }); // creates a temporary object, and then copies it into the vector
+	stack.emplace_back("a", 2);  // forwards the arguments so the object can be created directly in the vector (no copy made)
+	// push_back won't use explicit constructors, emplace_back will
+	stack.push_back({ 2 }); // compile error: Foo(int) is explicit (stops implicit conversions)
+	stack.emplace_back(2);  // ok
 }
 {   // <----------- 16.11 ------------>
-
+    // something in the way
 }
 {   // <----------- 16.12 ------------>
-
-}
-{   // <----------- 16.13 ------------>
-
+    // std::vector<bool> is not a vector (not required to be contiguous in memory)
+    // nor does it hold bool values (holds a collection of bits), nor does it meet C++’s definition of a container
+    // prefer not to use it, use bitset or vector<char> or 3rd party dynamic bitsets instead
 }
     return 0;
 }
