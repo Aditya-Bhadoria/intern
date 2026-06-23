@@ -190,13 +190,133 @@ int main(){
     std::cout << MyClass::s_mychars.third; // print i
 }
 {   // <----------- 15.8 ------------>
+    class Accumulator{
+    private:
+        int m_value { 0 };
+    public:
+        void add(int value) { m_value += value; }
+        // Here is the friend declaration that makes non-member function void print(const Accumulator& accumulator) a friend of Accumulator
+        friend void print(const Accumulator& accumulator);
+    };
+    void print(const Accumulator& accumulator){
+        // Because print() is a friend of Accumulator
+        // it can access the private members of Accumulator
+        std::cout << accumulator.m_value;
+    }
+    Accumulator acc{};
+    acc.add(5); // add 5 to the accumulator
+    print(acc); // call the print() non-member function
+
+    public:
+        // Friend functions defined inside a class are non-member functions
+        friend void print(const Accumulator& accumulator){
+            // Because print() is a friend of Accumulator
+            // it can access the private members of Accumulator
+            std::cout << accumulator.m_value;
+        }
+    print(acc); // call the print() non-member function
     
+    public:
+        bool isEqualToMember(const Value& v) const;
+        friend bool isEqualToNonmember(const Value& v1, const Value& v2);
+    bool Value::isEqualToMember(const Value& v) const { return m_value == v.m_value; }
+    bool isEqualToNonmember(const Value& v1, const Value& v2) { return v1.m_value == v2.m_value; }
+    std::cout << v1.isEqualToMember(v2) << '\n';
+    std::cout << isEqualToNonmember(v1, v2) << '\n';
+    
+    // Multiple friends 
+    class Humidity; // forward declaration of Humidity
+    class Temperature {
+        friend void printWeather(const Temperature& temperature, const Humidity& humidity); // forward declaration needed for this line
+    };
+    class Humidity {
+        friend void printWeather(const Temperature& temperature, const Humidity& humidity);
+    };
+    void printWeather(const Temperature& temperature, const Humidity& humidity) {}
+    Humidity hum { 10 };
+    Temperature temp { 12 };
+    printWeather(temp, hum);
 }
 {   // <----------- 15.9 ------------>
+    class Storage {
+    private:
+        int m_nValue {}; double m_dValue {};
+    public:
+        Storage(int nValue, double dValue) : m_nValue { nValue }, m_dValue { dValue }{}
+        // Make the Display class a friend of Storage
+        friend class Display;
+    };
+    class Display {
+    private:
+        bool m_displayIntFirst {};
+    public:
+        Display(bool displayIntFirst) : m_displayIntFirst { displayIntFirst } {}
+        // Because Display is a friend of Storage, Display members can access the private members of Storage
+        void displayStorage(const Storage& storage) {
+            if (m_displayIntFirst)
+                std::cout << storage.m_nValue << ' ' << storage.m_dValue << '\n';
+            else // display double first
+                std::cout << storage.m_dValue << ' ' << storage.m_nValue << '\n';
+        }
+        void setDisplayIntFirst(bool b){ m_displayIntFirst = b; }
+    };
+    Storage storage { 5, 6.7 };
+    Display display { false };
+    display.displayStorage(storage);
+    display.setDisplayIntFirst(true);
+    display.displayStorage(storage);
+    // friendship is not reciprocal - if Display is a friend of Storage, does not mean Storage is also a friend of Display
+    // Nor is friendship inherited. If class A makes B a friend, classes derived from B are not friends of A.
 
+    class Display; // forward declaration for class Display
+    class Storage{
+        // Make the Display::displayStorage member function a friend of the Storage class
+        friend void Display::displayStorage(const Storage& storage); // error: Storage hasn't seen the full definition of class Display
+    };
+
+    // To fix ts - Write definition of Display before Storage
+    // However... 
+    class Display {
+    public:
+        Display(bool displayIntFirst) : m_displayIntFirst { displayIntFirst } {}
+        void displayStorage(const Storage& storage){ /*code*/ } // compile error: compiler doesn't know what a Storage is
+    };
+    class Storage {
+    public:
+        // Make the Display::displayStorage member function a friend of the Storage class
+        friend void Display::displayStorage(const Storage& storage); // okay now
+    };
+
+    // Final fix - 
+    class Storage; // forward declaration for class Storage
+    class Display {
+    public:
+        void displayStorage(const Storage& storage); // forward declaration for Storage needed for reference here
+    };
+    class Storage { // full definition of Storage class
+    public:
+        // Make the Display::displayStorage member function a friend of the Storage class
+        // Requires seeing the full definition of class Display (as displayStorage is a member)
+        friend void Display::displayStorage(const Storage& storage);
+    };
+    // Now we can define Display::displayStorage
+    // Requires seeing the full definition of class Storage (as we access Storage members)
+    void Display::displayStorage(const Storage& storage) { /*code*/ }
+    Storage storage { 5, 6.7 };
+    Display display { false };
+    display.displayStorage(storage);
 }
 {   // <----------- 15.10 ------------>
-
+    class Employee{
+        public:
+        const std::string& getName() const &  { return m_name; } //  & qualifier overloads function to match only lvalue implicit objects, returns by reference
+        std::string        getName() const && { return m_name; } // && qualifier overloads function to match only rvalue implicit objects, returns by value
+    };
+    // createEmployee() returns an Employee by value (which means the returned value is an rvalue)
+    Employee createEmployee(std::string_view name){ Employee e { name }; return e; }
+    Employee joe { "Joe" };
+    std::cout << joe.getName() << '\n'; // Joe is an lvalue, so this calls std::string& getName() & (returns a reference)
+    std::cout << createEmployee("Frank").getName() << '\n'; // Frank is an rvalue, so this calls std::string getName() && (makes a copy)
 }
     return 0;
 }
