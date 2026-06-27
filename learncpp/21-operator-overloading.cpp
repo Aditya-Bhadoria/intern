@@ -450,13 +450,47 @@ int main(){
     }
 }
 {   // <----------- 21.14 ------------>
-    
+    class Cents {
+    private:
+        int m_cents {};
+    public:
+        Cents(int cents) : m_cents { cents } {}
+        friend bool operator< (const Cents& c1, const Cents& c2) // got to overload, otherwise template give compile error
+        { return (c1.m_cents < c2.m_cents); } 
+        friend std::ostream& operator<< (std::ostream& ostr, const Cents& c) {
+            ostr << c.m_cents; return ostr;
+        }
+    };
+    template <typename T>
+    const T& max(const T& x, const T& y)
+    { return (x < y) ? y : x; }
+    Cents nickel{ 5 };
+    Cents dime { 10 };
+    Cents bigger { max(nickel, dime) };
+    std::cout << bigger << " is bigger\n";
+
+    template <typename T>
+    T average(const T* myArray, int numValues){
+        T sum { 0 };
+        for (int count { 0 }; count < numValues; ++count) sum += myArray[count];
+        sum /= numValues;
+        return sum;
+    }
+    class Cents{
+    public:
+        friend std::ostream& operator<< (std::ostream& out, const Cents& cents) 
+        { out << cents.m_cents << " cents "; return out; }
+        Cents& operator+= (const Cents &cents) { m_cents += cents.m_cents; return *this; }
+        Cents& operator/= (int x) { m_cents /= x; return *this; }
+    };
+    Cents centsArray[] { Cents { 5 }, Cents { 10 }, Cents { 15 }, Cents { 14 } };
+    std::cout << average(centsArray, 4) << '\n';
 }
 {   // <----------- 21.x ------------>
-
+    // something cool
 }
 {   // <----------- 21.y ------------>
-
+    // something Cooler [DBZ Reference]
 }
     return 0;
 }
